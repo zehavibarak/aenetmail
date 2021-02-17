@@ -28,7 +28,7 @@ namespace AE.Net.Mail
         private bool _Idling;
         private Task _IdleTask;
         private Task _ResponseTask;
-        private ModifiedUtf7Encoding _utf7 = new ModifiedUtf7Encoding();
+        private readonly ModifiedUtf7Encoding _utf7 = new ModifiedUtf7Encoding();
 
         private string _FetchHeaders = null;
 
@@ -104,7 +104,7 @@ namespace AE.Net.Mail
             }
         }
 
-        public virtual event EventHandler<ImapClientExceptionEventArgs> ImapException;
+        public event EventHandler<ImapClientExceptionEventArgs> ImapException;
 
         protected virtual void IdleStart()
         {
@@ -156,13 +156,7 @@ namespace AE.Net.Mail
             SendCommandGetResponse(GetTag() + "IDLE");
         }
 
-        private bool HasEvents
-        {
-            get
-            {
-                return _MessageDeleted != null || _NewMessage != null;
-            }
-        }
+        private bool HasEvents => _MessageDeleted != null || _NewMessage != null;
 
         protected virtual void IdleStop()
         {
@@ -201,11 +195,11 @@ namespace AE.Net.Mail
         {
             try
             {
-                string last = null, resp;
+                string last = null;
 
                 while (true)
                 {
-                    if (!TryGetResponse(out resp))
+                    if (!TryGetResponse(out string resp))
                     {
                         //Child task should still running on ReadByte here.
                         //Need to send some data to get it to exit.
@@ -264,7 +258,7 @@ namespace AE.Net.Mail
             IdlePause();
 
             mailbox = _utf7.Encode(mailbox);
-            string flags = String.Empty;
+            string flags = string.Empty;
 
             string size = rawMessage.Length.ToString();
             if (messageFlags.HasValue)
@@ -274,14 +268,14 @@ namespace AE.Net.Mail
 
             if (mailbox == null)
                 CheckMailboxSelected();
-            mailbox = mailbox ?? _SelectedMailbox;
+            mailbox ??= _SelectedMailbox;
 
             string body = rawMessage;
             string command = GetTag() + "APPEND " + (mailbox ?? _SelectedMailbox).QuoteString() + flags + " {" + size + "}";
             string response = SendCommandGetResponse(command);
             if (response.StartsWith("+"))
             {
-                response = SendCommandGetResponse(body.ToString());
+                _ = SendCommandGetResponse(body.ToString());
             }
             IdleResume();
         }
@@ -304,7 +298,7 @@ namespace AE.Net.Mail
         {
             IdlePause();
             string command = GetTag() + "CAPABILITY";
-            string response = SendCommandGetResponse(command);
+            _ = SendCommandGetResponse(command);
             IdleResume();
             return _Capability;
         }
@@ -316,7 +310,7 @@ namespace AE.Net.Mail
             string prefix = null;
             if (messageset.StartsWith("UID ", StringComparison.OrdinalIgnoreCase))
             {
-                messageset = messageset.Substring(4);
+                messageset = messageset[4..];
                 prefix = "UID ";
             }
             string command = string.Concat(GetTag(), prefix, "COPY ", messageset, " " + destination.QuoteString());
@@ -347,7 +341,7 @@ namespace AE.Net.Mail
             Mailbox mailbox = mailboxName.Equals(_SelectedMailbox) ? _Mailbox : new Mailbox(mailboxName);
             string tag = GetTag();
             string command = tag + "EXAMINE " + _utf7.Encode(mailboxName).QuoteString();
-            string response = SendCommandGetResponse(command, mailbox);
+            _ = SendCommandGetResponse(command, mailbox);
 
             IdleResume();
             return mailbox;
@@ -360,12 +354,12 @@ namespace AE.Net.Mail
 
             string tag = GetTag();
             string command = tag + "EXPUNGE";
-            string response = SendCommandGetResponse(command);
+            _ = SendCommandGetResponse(command);
 
             IdleResume();
         }
 
-        public virtual void DeleteMessage(AE.Net.Mail.MailMessage msg)
+        public virtual void DeleteMessage(MailMessage msg)
         {
             DeleteMessage(msg.Uid);
         }
@@ -516,8 +510,8 @@ namespace AE.Net.Mail
                 if (response[0] != '*' || !response.Contains("FETCH ("))
                     continue;
 
-                var imapHeaders = Utilities.ParseImapHeader(response.Substring(response.IndexOf('(') + 1));
-                String body = (imapHeaders["BODY[HEADER]"] ?? imapHeaders["BODY[]"]);
+                var imapHeaders = Utilities.ParseImapHeader(response[(response.IndexOf('(') + 1)..]);
+                string body = (imapHeaders["BODY[HEADER]"] ?? imapHeaders["BODY[]"]);
                 if (body == null && !uidsonly)
                 {
                     RaiseWarning(null, "Expected BODY[] in stream, but received \"" + response + "\"");
@@ -563,8 +557,8 @@ namespace AE.Net.Mail
                 {
                     quota = new Quota(m.Groups[1].ToString(),
                                                                                                     m.Groups[2].ToString(),
-                                                                                                    Int32.Parse(m.Groups[3].ToString()),
-                                                                                                    Int32.Parse(m.Groups[4].ToString())
+                                                                                                    int.Parse(m.Groups[3].ToString()),
+                                                                                                    int.Parse(m.Groups[4].ToString())
                                                                                     );
                     break;
                 }
@@ -586,7 +580,7 @@ namespace AE.Net.Mail
             Match m = Regex.Match(response, reg);
             while (m.Groups.Count > 1)
             {
-                Mailbox mailbox = new Mailbox(_utf7.Decode(m.Groups[3].Value));
+                Mailbox mailbox = new Mailbox(ModifiedUtf7Encoding.Decode(m.Groups[3].Value));
                 mailbox.SetFlags(m.Groups[1].Value);
                 x.Add(mailbox);
                 response = GetResponse();
@@ -607,7 +601,7 @@ namespace AE.Net.Mail
             Match m = Regex.Match(response, reg);
             while (m.Groups.Count > 1)
             {
-                Mailbox mailbox = new Mailbox(_utf7.Decode(m.Groups[3].Value));
+                Mailbox mailbox = new Mailbox(ModifiedUtf7Encoding.Decode(m.Groups[3].Value));
                 x.Add(mailbox);
                 response = GetResponse();
                 m = Regex.Match(response, reg);
@@ -618,8 +612,8 @@ namespace AE.Net.Mail
 
         internal override void OnLogin(string login, string password)
         {
-            string command = String.Empty;
-            string result = String.Empty;
+            string command = string.Empty;
+            string result = string.Empty;
             string tag = GetTag();
             string key;
 
@@ -630,13 +624,13 @@ namespace AE.Net.Mail
                     result = SendCommandGetResponse(command);
                     // retrieve server key
                     key = result.Replace("+ ", "");
-                    key = System.Text.Encoding.Default.GetString(Convert.FromBase64String(key));
+                    key = Encoding.Default.GetString(Convert.FromBase64String(key));
                     // calcul hash
-                    using (var kMd5 = new HMACMD5(System.Text.Encoding.ASCII.GetBytes(password)))
+                    using (var kMd5 = new HMACMD5(Encoding.ASCII.GetBytes(password)))
                     {
-                        byte[] hash1 = kMd5.ComputeHash(System.Text.Encoding.ASCII.GetBytes(key));
+                        byte[] hash1 = kMd5.ComputeHash(Encoding.ASCII.GetBytes(key));
                         key = BitConverter.ToString(hash1).ToLower().Replace("-", "");
-                        result = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes(login + " " + key));
+                        result = Convert.ToBase64String(Encoding.ASCII.GetBytes(login + " " + key));
                         result = SendCommandGetResponse(result);
                     }
                     break;
@@ -661,7 +655,7 @@ namespace AE.Net.Mail
             {
                 if (result.StartsWith("+ ") && result.EndsWith("=="))
                 {
-                    string jsonErr = Utilities.DecodeBase64(result.Substring(2), System.Text.Encoding.UTF7);
+                    string jsonErr = Utilities.DecodeBase64(result[2..], Encoding.UTF7);
                     throw new Exception(jsonErr);
                 }
                 else
@@ -707,7 +701,7 @@ namespace AE.Net.Mail
                 throw new Exception("Unknow server response !");
             }
 
-            response = response.Substring(12);
+            response = response[12..];
             Namespaces n = new Namespaces();
             //[TODO] be sure to parse correctly namespace when not all namespaces are present. NIL character
             string reg = @"\((.*?)\) \((.*?)\) \((.*?)\)$";
@@ -757,7 +751,7 @@ namespace AE.Net.Mail
                 if (m.Groups.Count > 1)
                     result = Convert.ToInt32(m.Groups[1].ToString());
                 response = GetResponse();
-                m = Regex.Match(response, reg);
+                _ = Regex.Match(response, reg);
             }
             IdleResume();
             return result;
@@ -862,7 +856,7 @@ namespace AE.Net.Mail
 
                     else if (response.StartsWith("* CAPABILITY "))
                     {
-                        response = response.Substring(13);
+                        response = response[13..];
                         _Capability = response.Trim().Split(' ');
                     }
 
@@ -893,7 +887,7 @@ namespace AE.Net.Mail
             }
         }
 
-        private string FlagsToFlagString(Flags flags)
+        private static string FlagsToFlagString(Flags flags)
         {
             return string.Join(" ", flags.ToString().Split(',').Select(x => "\\" + x.Trim()));
         }
@@ -920,7 +914,7 @@ namespace AE.Net.Mail
             string prefix = null;
             if (messageset.StartsWith("UID ", StringComparison.OrdinalIgnoreCase))
             {
-                messageset = messageset.Substring(4);
+                messageset = messageset[4..];
                 prefix = "UID ";
             }
 
@@ -952,14 +946,14 @@ namespace AE.Net.Mail
         {
             if (!IsResultOK(response))
             {
-                response = response.Substring(response.IndexOf(" ")).Trim();
+                response = response[response.IndexOf(" ")..].Trim();
                 throw new Exception(response);
             }
         }
 
-        internal bool IsResultOK(string response)
+        internal static bool IsResultOK(string response)
         {
-            response = response.Substring(response.IndexOf(" ")).Trim();
+            response = response[response.IndexOf(" ")..].Trim();
             return response.ToUpper().StartsWith("OK");
         }
     }

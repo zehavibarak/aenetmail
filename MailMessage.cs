@@ -13,7 +13,7 @@ namespace AE.Net.Mail {
 		Low = 1
 	}
 
-	[System.Flags]
+	[Flags]
 	public enum Flags {
 		None = 0,
 		Seen = 1,
@@ -25,10 +25,12 @@ namespace AE.Net.Mail {
 
 	public class MailMessage : ObjectWHeaders {
 		public static implicit operator System.Net.Mail.MailMessage(MailMessage msg) {
-			var ret = new System.Net.Mail.MailMessage();
-			ret.Subject = msg.Subject;
-			ret.Sender = msg.Sender;
-			foreach (var a in msg.Bcc)
+            var ret = new System.Net.Mail.MailMessage
+            {
+                Subject = msg.Subject,
+                Sender = msg.Sender
+            };
+            foreach (var a in msg.Bcc)
 				ret.Bcc.Add(a);
 			ret.Body = msg.Body;
 			ret.IsBodyHtml = msg.ContentType.Contains("html");
@@ -39,9 +41,9 @@ namespace AE.Net.Mail {
 			foreach (var a in msg.To)
 				ret.To.Add(a);
 			foreach (var a in msg.Attachments)
-				ret.Attachments.Add(new System.Net.Mail.Attachment(new System.IO.MemoryStream(a.GetData()), a.Filename, a.ContentType));
+				ret.Attachments.Add(new System.Net.Mail.Attachment(new MemoryStream(a.GetData()), a.Filename, a.ContentType));
 			foreach (var a in msg.AlternateViews)
-				ret.AlternateViews.Add(new System.Net.Mail.AlternateView(new System.IO.MemoryStream(a.GetData()), a.ContentType));
+				ret.AlternateViews.Add(new AlternateView(new MemoryStream(a.GetData()), a.ContentType));
 
 			return ret;
 		}
@@ -49,7 +51,7 @@ namespace AE.Net.Mail {
 		private bool _HeadersOnly; // set to true if only headers have been fetched. 
 
 		public MailMessage() {
-			RawFlags = new string[0];
+			RawFlags = Array.Empty<string>();
 			To = new Collection<MailAddress>();
 			Cc = new Collection<MailAddress>();
 			Bcc = new Collection<MailAddress>();
@@ -78,10 +80,9 @@ namespace AE.Net.Mail {
 
 		public virtual void Load(string message, bool headersOnly = false) {
 			if (string.IsNullOrEmpty(message)) return;
-			using (var mem = new MemoryStream(_DefaultEncoding.GetBytes(message))) {
-				Load(mem, headersOnly, message.Length);
-			}
-		}
+            using var mem = new MemoryStream(_DefaultEncoding.GetBytes(message));
+            Load(mem, headersOnly, message.Length);
+        }
 
 		public virtual void Load(Stream reader, bool headersOnly = false, int maxLength = 0, char? termChar = null)
 		{
@@ -119,7 +120,7 @@ namespace AE.Net.Mail {
 						reader.ReadToEnd(maxLength, Encoding);
 				} else {
 					//	sometimes when email doesn't have a body, we get here with maxLength == 0 and we shouldn't read any further
-					string body = String.Empty;
+					string body = string.Empty;
 					if (maxLength > 0)
 						body = reader.ReadToEnd(maxLength, Encoding);
 
@@ -157,7 +158,7 @@ namespace AE.Net.Mail {
 					bounderInner = "--" + boundary,
 					bounderOuter = bounderInner + "--";
 			var n = 0;
-			var body = new System.Text.StringBuilder();
+			var body = new StringBuilder();
 			do {
 				if (maxLengthSpecified && maxLength <= 0)
 					return body.ToString();
@@ -204,33 +205,32 @@ namespace AE.Net.Mail {
 			return body.ToString();
 		}
 
-		private static Dictionary<string, int> _FlagCache = System.Enum.GetValues(typeof(Flags)).Cast<Flags>().ToDictionary(x => x.ToString(), x => (int)x, StringComparer.OrdinalIgnoreCase);
+		private static readonly Dictionary<string, int> _FlagCache = Enum.GetValues(typeof(Flags)).Cast<Flags>().ToDictionary(x => x.ToString(), x => (int)x, StringComparer.OrdinalIgnoreCase);
 		internal void SetFlags(string flags) {
 			RawFlags = flags.Split(' ').Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 			Flags = (Flags)RawFlags.Select(x => {
-				int flag = 0;
-				if (_FlagCache.TryGetValue(x.TrimStart('\\'), out flag))
-					return flag;
-				else
-					return 0;
-			}).Sum();
+                if (_FlagCache.TryGetValue(x.TrimStart('\\'), out int flag))
+                    return flag;
+                else
+                    return 0;
+            }).Sum();
 		}
 
-        public virtual void Save(System.IO.Stream stream, Encoding encoding = null)
+        public virtual void Save(Stream stream, Encoding encoding = null)
         {
 #if NET45
 			using (var str = new System.IO.StreamWriter(stream, encoding ?? System.Text.Encoding.Default, 8096, true)) {
 				Save(str);
             }
 #else
-            var str = new System.IO.StreamWriter(stream, encoding ?? System.Text.Encoding.Default);
+            var str = new StreamWriter(stream, encoding ?? Encoding.Default);
             Save(str);
             str.Flush();
 #endif
         } 
 
 		private static readonly string[] SpecialHeaders = "Date,To,Cc,Reply-To,Bcc,Sender,From,Message-ID,Importance,Subject".Split(',');
-		public virtual void Save(System.IO.TextWriter txt) {
+		public virtual void Save(TextWriter txt) {
 			txt.WriteLine("Date: {0}", (Date == DateTime.MinValue ? DateTime.Now : Date).GetRFC2060Date());
 			txt.WriteLine("To: {0}", string.Join("; ", To.Select(x => x.ToString())));
 			txt.WriteLine("Cc: {0}", string.Join("; ", Cc.Select(x => x.ToString())));

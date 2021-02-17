@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 
 namespace AE.Net.Mail {
 	internal static class Utilities {
-		private static CultureInfo _enUsCulture = CultureInfo.GetCultureInfo("en-US");
+		private static readonly CultureInfo _enUsCulture = CultureInfo.GetCultureInfo("en-US");
 
 		internal static void CopyStream(Stream a, Stream b, int maxLength, int bufferSize = 8192) {
 			int read;
@@ -77,54 +77,58 @@ namespace AE.Net.Mail {
 			int i;
 			byte b = 0, b0;
 			var read = false;
-			using (var mem = new MemoryStream()) {
-				while (true) {
-					b0 = b;
-					i = stream.ReadByte();
-					if (i == -1) break;
-					else read = true;
+            using var mem = new MemoryStream();
+            while (true)
+            {
+                b0 = b;
+                i = stream.ReadByte();
+                if (i == -1) break;
+                else read = true;
 
-					b = (byte)i;
-					if (maxLengthSpecified) maxLength--;
+                b = (byte)i;
+                if (maxLengthSpecified) maxLength--;
 
-					if (maxLengthSpecified && mem.Length == 1 && b == termChar && b0 == termChar) {
-						maxLength++;
-						continue;
-					}
+                if (maxLengthSpecified && mem.Length == 1 && b == termChar && b0 == termChar)
+                {
+                    maxLength++;
+                    continue;
+                }
 
-					if (b == 10 || b == 13) {
-						if (mem.Length == 0 && b == 10) {
-							continue;
-						} else break;
-					}
+                if (b == 10 || b == 13)
+                {
+                    if (mem.Length == 0 && b == 10)
+                    {
+                        continue;
+                    }
+                    else break;
+                }
 
-					mem.WriteByte(b);
-					if (maxLengthSpecified && maxLength == 0)
-						break;
-				}
+                mem.WriteByte(b);
+                if (maxLengthSpecified && maxLength == 0)
+                    break;
+            }
 
-				if (mem.Length == 0 && !read) return null;
-				return encoding.GetString(mem.ToArray());
-			}
-		}
+            if (mem.Length == 0 && !read) return null;
+            return encoding.GetString(mem.ToArray());
+        }
 
 		internal static string ReadToEnd(this Stream stream, int maxLength, Encoding encoding) {
 			if (stream.CanTimeout)
 				stream.ReadTimeout = 10000;
+            byte[] buffer = new byte[8192];
+            using var mem = new MemoryStream();
 
-			int read = 1;
-			byte[] buffer = new byte[8192];
-			using (var mem = new MemoryStream()) {
-				do {
-					var length = maxLength == 0 ? buffer.Length : Math.Min(maxLength - (int)mem.Length, buffer.Length);
-					read = stream.Read(buffer, 0, length);
-					mem.Write(buffer, 0, read);
-					if (maxLength > 0 && mem.Length == maxLength) break;
-				} while (read > 0);
+            int read;
+            do
+            {
+                var length = maxLength == 0 ? buffer.Length : Math.Min(maxLength - (int)mem.Length, buffer.Length);
+                read = stream.Read(buffer, 0, length);
+                mem.Write(buffer, 0, read);
+                if (maxLength > 0 && mem.Length == maxLength) break;
+            } while (read > 0);
 
-				return encoding.GetString(mem.ToArray());
-			}
-		}
+            return encoding.GetString(mem.ToArray());
+        }
 
 		internal static void TryDispose<T>(ref T obj) where T : class, IDisposable {
 			try {
@@ -146,28 +150,29 @@ namespace AE.Net.Mail {
 		}
 
 		internal static int ToInt(this string input) {
-			int result;
-			if (int.TryParse(input, out result)) {
-				return result;
-			} else {
-				return 0;
-			}
-		}
+            if (int.TryParse(input, out int result))
+            {
+                return result;
+            }
+            else
+            {
+                return 0;
+            }
+        }
 
 		internal static DateTime? ToNullDate(this string input) {
-			DateTime result;
-			input = NormalizeDate(input);
-			if (DateTime.TryParse(input, _enUsCulture, DateTimeStyles.None, out result)) {
+            input = NormalizeDate(input);
+            if (DateTime.TryParse(input, _enUsCulture, DateTimeStyles.None, out DateTime result)) {
 				return result;
 			} else {
 				return null;
 			}
 		}
 
-		private static Regex rxTimeZoneName = new Regex(@"\s+\([a-z]+\)$", RegexOptions.Compiled | RegexOptions.IgnoreCase); //Mon, 28 Feb 2005 19:26:34 -0500 (EST)
-		private static Regex rxTimeZoneColon = new Regex(@"\s+(\+|\-)(\d{1,2})\D(\d{2})$", RegexOptions.Compiled | RegexOptions.IgnoreCase); //Mon, 28 Feb 2005 19:26:34 -0500 (EST)
-		private static Regex rxTimeZoneMinutes = new Regex(@"([\+\-]?\d{1,2})(\d{2})$", RegexOptions.Compiled); //search can be strict because the format has already been normalized
-		private static Regex rxNegativeHours = new Regex(@"(?<=\s)\-(?=\d{1,2}\:)", RegexOptions.Compiled);
+		private static readonly Regex rxTimeZoneName = new Regex(@"\s+\([a-z]+\)$", RegexOptions.Compiled | RegexOptions.IgnoreCase); //Mon, 28 Feb 2005 19:26:34 -0500 (EST)
+		private static readonly Regex rxTimeZoneColon = new Regex(@"\s+(\+|\-)(\d{1,2})\D(\d{2})$", RegexOptions.Compiled | RegexOptions.IgnoreCase); //Mon, 28 Feb 2005 19:26:34 -0500 (EST)
+		private static readonly Regex rxTimeZoneMinutes = new Regex(@"([\+\-]?\d{1,2})(\d{2})$", RegexOptions.Compiled); //search can be strict because the format has already been normalized
+		private static readonly Regex rxNegativeHours = new Regex(@"(?<=\s)\-(?=\d{1,2}\:)", RegexOptions.Compiled);
 
 		public static string NormalizeDate(string value) {
 			value = rxTimeZoneName.Replace(value, string.Empty);
@@ -206,7 +211,7 @@ namespace AE.Net.Mail {
 		internal static bool EndsWithWhiteSpace(this string line) {
 			if (string.IsNullOrEmpty(line))
 				return false;
-			var chr = line[line.Length - 1];
+			var chr = line[^1];
 			return IsWhiteSpace(chr);
 		}
 
@@ -218,7 +223,7 @@ namespace AE.Net.Mail {
 			var result = line;
 
 			if (result.StartsWithWhiteSpace())
-				result = result.Substring(1, result.Length - 1);
+				result = result[1..];
 
 			return result;
 		}
@@ -227,20 +232,20 @@ namespace AE.Net.Mail {
 			var result = line;
 
 			if (result.EndsWithWhiteSpace())
-				result = result.Substring(0, result.Length - 1);
+				result = result[0..^1];
 
 			return result;
 		}
 
 		public static string DecodeQuotedPrintable(string value, Encoding encoding = null) {
 			if (encoding == null) {
-				encoding = System.Text.Encoding.Default;
+				encoding = Encoding.Default;
 			}
 
-			if (value.IndexOf('_') > -1 && value.IndexOf(' ') == -1)
+			if (value.Contains('_') && !value.Contains(' '))
 				value = value.Replace('_', ' ');
 
-			var data = System.Text.Encoding.ASCII.GetBytes(value);
+			var data = Encoding.ASCII.GetBytes(value);
 			var eq = Convert.ToByte('=');
 			var n = 0;
 
@@ -281,7 +286,7 @@ namespace AE.Net.Mail {
 				return data;
 			}
 			var bytes = Convert.FromBase64String(data);
-			return (encoding ?? System.Text.Encoding.Default).GetString(bytes);
+			return (encoding ?? Encoding.Default).GetString(bytes);
 		}
 
 		#region OpenPOP.NET
@@ -319,36 +324,25 @@ namespace AE.Net.Mail {
 
 				// Get the encoding which corrosponds to the character set
 				Encoding charsetEncoding = ParseCharsetToEncoding(charset, @default);
+                string decodedText = (encoding.ToUpperInvariant()) switch
+                {
+                    // RFC:
+                    // The "B" encoding is identical to the "BASE64" 
+                    // encoding defined by RFC 2045.
+                    // http://tools.ietf.org/html/rfc2045#section-6.8
+                    "B" => DecodeBase64(encodedText, charsetEncoding),
+                    // RFC:
+                    // The "Q" encoding is similar to the "Quoted-Printable" content-
+                    // transfer-encoding defined in RFC 2045.
+                    // There are more details to this. Please check
+                    // http://tools.ietf.org/html/rfc2047#section-4.2
+                    // 
+                    "Q" => DecodeQuotedPrintable(encodedText, charsetEncoding),
+                    _ => throw new ArgumentException("The encoding " + encoding + " was not recognized"),
+                };
 
-				// Store decoded text here when done
-				string decodedText;
-
-				// Encoding may also be written in lowercase
-				switch (encoding.ToUpperInvariant()) {
-					// RFC:
-					// The "B" encoding is identical to the "BASE64" 
-					// encoding defined by RFC 2045.
-					// http://tools.ietf.org/html/rfc2045#section-6.8
-					case "B":
-						decodedText = DecodeBase64(encodedText, charsetEncoding);
-						break;
-
-					// RFC:
-					// The "Q" encoding is similar to the "Quoted-Printable" content-
-					// transfer-encoding defined in RFC 2045.
-					// There are more details to this. Please check
-					// http://tools.ietf.org/html/rfc2047#section-4.2
-					// 
-					case "Q":
-						decodedText = DecodeQuotedPrintable(encodedText, charsetEncoding);
-						break;
-
-					default:
-						throw new ArgumentException("The encoding " + encoding + " was not recognized");
-				}
-
-				// Repalce our encoded value with our decoded value
-				decodedWords = decodedWords.Replace(fullMatchValue, decodedText);
+                // Repalce our encoded value with our decoded value
+                decodedWords = decodedWords.Replace(fullMatchValue, decodedText);
 			}
 
 			return decodedWords;
@@ -373,7 +367,7 @@ namespace AE.Net.Mail {
 				charSetUpper = charSetUpper.Replace("-", ""); // Remove - which could be used as cp-1554
 
 				// Now we hope the only thing left in the characterSet is numbers.
-				int codepageNumber = int.Parse(charSetUpper, System.Globalization.CultureInfo.InvariantCulture);
+				int codepageNumber = int.Parse(charSetUpper, CultureInfo.InvariantCulture);
 
 				return Encoding.GetEncodings().Where(x => x.CodePage == codepageNumber)
 					.Select(x => x.GetEncoding()).FirstOrDefault() ?? @default ?? Encoding.Default;
@@ -381,7 +375,7 @@ namespace AE.Net.Mail {
 
 			// It seems there is no codepage value in the characterSet. It must be a named encoding
 			return Encoding.GetEncodings().Where(x => x.Name.Is(characterSet))
-				.Select(x => x.GetEncoding()).FirstOrDefault() ?? @default ?? System.Text.Encoding.Default;
+				.Select(x => x.GetEncoding()).FirstOrDefault() ?? @default ?? Encoding.Default;
 		}
 		#endregion
 
@@ -404,7 +398,7 @@ namespace AE.Net.Mail {
 			}
 
 			// replace optional CR and LF characters
-			param = param.Replace("\r", String.Empty).Replace("\n", String.Empty);
+			param = param.Replace("\r", string.Empty).Replace("\n", string.Empty);
 
 
 			var lengthWPadding = param.Length;
@@ -416,7 +410,7 @@ namespace AE.Net.Mail {
 				} else {
 					//add the minimum necessary padding
 					if (missingPaddingLength > 2)
-						missingPaddingLength = missingPaddingLength % 2;
+						missingPaddingLength %= 2;
 					param += new string(Base64Padding, missingPaddingLength);
 					lengthWPadding += missingPaddingLength;
 					System.Diagnostics.Debug.Assert(lengthWPadding % 4 == 0);
@@ -449,13 +443,12 @@ namespace AE.Net.Mail {
 		}
 		#endregion
 
-		internal static VT Get<KT, VT>(this IDictionary<KT, VT> dictionary, KT key, VT defaultValue = default(VT)) {
+		internal static VT Get<KT, VT>(this IDictionary<KT, VT> dictionary, KT key, VT defaultValue = default) {
 			if (dictionary == null)
 				return defaultValue;
-			VT value;
-			if (dictionary.TryGetValue(key, out value))
-				return value;
-			return defaultValue;
+            if (dictionary.TryGetValue(key, out VT value))
+                return value;
+            return defaultValue;
 		}
 
 		internal static void Set<KT, VT>(this IDictionary<KT, VT> dictionary, KT key, VT value) {

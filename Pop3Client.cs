@@ -22,7 +22,7 @@ namespace AE.Net.Mail {
 
 		internal override void CheckResultOK(string result) {
 			if (!result.StartsWith("+OK", StringComparison.OrdinalIgnoreCase)) {
-				throw new Exception(result.Substring(result.IndexOf(' ') + 1).Trim());
+				throw new Exception(result[(result.IndexOf(' ') + 1)..].Trim());
 			}
 		}
 
@@ -37,7 +37,7 @@ namespace AE.Net.Mail {
 			return GetMessage((index + 1).ToString(), headersOnly);
 		}
 
-		private static Regex rxOctets = new Regex(@"(\d+)\s+octets", RegexOptions.IgnoreCase);
+		private static readonly Regex rxOctets = new Regex(@"(\d+)\s+octets", RegexOptions.IgnoreCase);
 		public virtual MailMessage GetMessage(string uid, bool headersOnly = false) {
 			CheckConnectionStatus();
 			var line = SendCommandGetResponse(string.Format(headersOnly ? "TOP {0} 0" : "RETR {0}", uid));
@@ -79,7 +79,7 @@ namespace AE.Net.Mail {
 			DeleteMessage((index + 1).ToString());
 		}
 
-		public virtual void DeleteMessage(AE.Net.Mail.MailMessage msg) {
+		public virtual void DeleteMessage(MailMessage msg) {
 			DeleteMessage(msg.Uid);
 		}
 	}

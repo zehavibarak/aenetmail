@@ -14,9 +14,9 @@ namespace AE.Net.Mail.Imap
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public string Decode(string input)
+        public static string Decode(string input)
         {
-            if (String.IsNullOrWhiteSpace(input))
+            if (string.IsNullOrWhiteSpace(input))
             {
                 return input;
             }
@@ -44,7 +44,7 @@ namespace AE.Net.Mail.Imap
         /// <returns></returns>
         public string Encode(string input)
         {
-            if (String.IsNullOrWhiteSpace(input))
+            if (string.IsNullOrWhiteSpace(input))
             {
                 return input;
             }
@@ -89,7 +89,7 @@ namespace AE.Net.Mail.Imap
             return result.ToString();
         }
 
-        private string EncodeNonPrintableAsciiString(string nonAsciiString)
+        private static string EncodeNonPrintableAsciiString(string nonAsciiString)
         {
             return Encoding.UTF8.GetString(Encoding.UTF7.GetBytes(nonAsciiString)).Replace('/', ',').Replace('+', '&');
         }

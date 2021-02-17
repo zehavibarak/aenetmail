@@ -27,15 +27,11 @@ namespace AE.Net.Mail {
 			}
 		}
 
-		public virtual string Charset {
-			get {
-				return Headers["Content-Transfer-Encoding"]["charset"].NotEmpty(
-					Headers["Content-Type"]["charset"]
-				);
-			}
-		}
+        public virtual string Charset => Headers["Content-Transfer-Encoding"]["charset"].NotEmpty(
+                    Headers["Content-Type"]["charset"]
+                );
 
-		protected System.Text.Encoding _DefaultEncoding = System.Text.Encoding.GetEncoding(1252);
+        protected System.Text.Encoding _DefaultEncoding = System.Text.Encoding.GetEncoding(1252);
 		protected System.Text.Encoding _Encoding;
 		public virtual System.Text.Encoding Encoding {
 			get {

@@ -4,11 +4,12 @@ using System.Linq;
 using System.Text;
 
 namespace AE.Net.Mail {
-	public class ImapClientExceptionEventArgs : System.EventArgs {
-		public ImapClientExceptionEventArgs(System.Exception Exception) {
+	public class ImapClientExceptionEventArgs : EventArgs
+    {
+		public ImapClientExceptionEventArgs(Exception Exception) {
 			this.Exception = Exception;
 		}
 
-		public System.Exception Exception { get; set; }
+		public Exception Exception { get; set; }
 	}
 }

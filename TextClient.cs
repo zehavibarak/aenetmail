@@ -19,11 +19,8 @@ namespace AE.Net.Mail {
 		public event EventHandler<WarningEventArgs> Warning;
 
 		protected virtual void RaiseWarning(MailMessage mailMessage, string message) {
-			var warning = Warning;
-			if (warning != null) {
-				warning(this, new WarningEventArgs { MailMessage = mailMessage, Message = message });
-			}
-		}
+            Warning?.Invoke(this, new WarningEventArgs { MailMessage = mailMessage, Message = message });
+        }
 
 		public TextClient() {
 			Encoding = System.Text.Encoding.GetEncoding(1252);

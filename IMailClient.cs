@@ -6,7 +6,7 @@ namespace AE.Net.Mail {
 		MailMessage GetMessage(int index, bool headersonly = false);
 		MailMessage GetMessage(string uid, bool headersonly = false);
 		void DeleteMessage(string uid);
-		void DeleteMessage(AE.Net.Mail.MailMessage msg);
+		void DeleteMessage(MailMessage msg);
 		void Disconnect();
 
 		event EventHandler<WarningEventArgs> Warning;

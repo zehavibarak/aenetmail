@@ -20,32 +20,22 @@ namespace AE.Net.Mail {
 			}
 		}
 
-		public virtual string Filename {
-			get {
-				return Headers["Content-Disposition"]["filename"].NotEmpty(
-													Headers["Content-Disposition"]["name"],
-													Headers["Content-Type"]["filename"],
-													Headers["Content-Type"]["name"]);
-			}
-		}
+        public virtual string Filename => Headers["Content-Disposition"]["filename"].NotEmpty(
+                                                    Headers["Content-Disposition"]["name"],
+                                                    Headers["Content-Type"]["filename"],
+                                                    Headers["Content-Type"]["name"]);
 
-		private string _ContentDisposition;
-		private string ContentDisposition {
-			get { return _ContentDisposition ?? (_ContentDisposition = Headers["Content-Disposition"].Value.ToLower()); }
-		}
+        private string _ContentDisposition;
+        private string ContentDisposition => _ContentDisposition ??= Headers["Content-Disposition"].Value.ToLower();
 
-		public virtual bool OnServer { get; internal set; }
+        public virtual bool OnServer { get; internal set; }
 
-		internal bool IsAttachment {
-			get {
-				return ContentDisposition == "attachment" || !string.IsNullOrEmpty(Filename);
-			}
-		}
+        internal bool IsAttachment => ContentDisposition == "attachment" || !string.IsNullOrEmpty(Filename);
 
-		public virtual void Save(string filename) {
-			using (var file = new System.IO.FileStream(filename, System.IO.FileMode.Create))
-				Save(file);
-		}
+        public virtual void Save(string filename) {
+            using var file = new System.IO.FileStream(filename, System.IO.FileMode.Create);
+            Save(file);
+        }
 
 		public virtual void Save(System.IO.Stream stream) {
 			var data = GetData();

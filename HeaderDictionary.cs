@@ -13,7 +13,7 @@ namespace AE.Net.Mail {
 			return this["Content-Type"]["boundary"];
 		}
 
-		private static Regex[] rxDates = new[]{
+		private static readonly Regex[] rxDates = new[]{
         @"\d{1,2}\s+[a-z]{3}\s+\d{2,4}\s+\d{1,2}\:\d{2}\:\d{1,2}\s+[\+\-\d\:]*",
         @"\d{4}\-\d{1,2}-\d{1,2}\s+\d{1,2}\:\d{2}(?:\:\d{2})?(?:\s+[\+\-\d:]+)?",
       }.Select(x => new Regex(x, RegexOptions.Compiled | RegexOptions.IgnoreCase)).ToArray();
@@ -40,8 +40,8 @@ namespace AE.Net.Mail {
 
 		public virtual T GetEnum<T>(string name) where T : struct, IConvertible {
 			var value = this[name].RawValue;
-			if (string.IsNullOrEmpty(value)) return default(T);
-			var values = System.Enum.GetValues(typeof(T)).Cast<T>().ToArray();
+			if (string.IsNullOrEmpty(value)) return default;
+			var values = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
 			return values.FirstOrDefault(x => x.ToString().Equals(value, StringComparison.OrdinalIgnoreCase));
 		}
 
@@ -71,7 +71,7 @@ namespace AE.Net.Mail {
 					mailAddressEndIndex = headerValue.Length;
 				}
 
-				var possibleMailAddress = headerValue.Substring(mailAddressStartIndex, mailAddressEndIndex - mailAddressStartIndex);
+				var possibleMailAddress = headerValue[mailAddressStartIndex..mailAddressEndIndex];
 
 				var mailAddress = possibleMailAddress.Trim().ToEmailAddress();
 
@@ -88,7 +88,7 @@ namespace AE.Net.Mail {
 			return mailAddresses.ToArray();
 		}
 
-		public static HeaderDictionary Parse(string headers, System.Text.Encoding encoding) {
+		public static HeaderDictionary Parse(string headers, Encoding encoding) {
 			headers = Utilities.DecodeWords(headers, encoding);
 			var temp = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 			var lines = headers.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
@@ -104,7 +104,7 @@ namespace AE.Net.Mail {
 					i = line.IndexOf(':');
 					if (i > -1) {
 						key = line.Substring(0, i).TrimStartOnce();
-						value = line.Substring(i + 1).TrimStartOnce();
+						value = line[(i + 1)..].TrimStartOnce();
 						temp.Set(key, value);
 					}
 				}

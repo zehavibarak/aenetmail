@@ -8,19 +8,13 @@ using System.Collections.ObjectModel;
 
 namespace AE.Net.Mail.Imap {
     public class Namespaces {
-        private Collection<Namespace> _servernamespace = new Collection<Namespace>();
-        private Collection<Namespace> _usernamespace = new Collection<Namespace>();
-        private Collection<Namespace> _sharednamespace = new Collection<Namespace>();
- 
-        public virtual Collection<Namespace> ServerNamespace {
-            get { return this._servernamespace; }
-        }
-        public virtual Collection<Namespace> UserNamespace {
-            get { return this._usernamespace; }
-        }
-        public virtual Collection<Namespace> SharedNamespace {
-            get { return this._sharednamespace; }
-        }
+        private readonly Collection<Namespace> _servernamespace = new Collection<Namespace>();
+        private readonly Collection<Namespace> _usernamespace = new Collection<Namespace>();
+        private readonly Collection<Namespace> _sharednamespace = new Collection<Namespace>();
+
+        public virtual Collection<Namespace> ServerNamespace => this._servernamespace;
+        public virtual Collection<Namespace> UserNamespace => this._usernamespace;
+        public virtual Collection<Namespace> SharedNamespace => this._sharednamespace;
     }
 
     public class Namespace {
